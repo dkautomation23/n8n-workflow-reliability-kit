@@ -1,0 +1,67 @@
+{
+  "name": "Reliability Kit — Smoke Test",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "bc1e84ca-2b4a-4b7f-aed9-89e00a351c6f",
+      "name": "Run Smoke Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [{
+            "id": "3393e2cb-79f4-40fa-b3b7-61763237387f",
+            "name": "testName",
+            "value": "Reliability Kit controlled failure",
+            "type": "string"
+          }]
+        },
+        "options": {}
+      },
+      "id": "ebf4b5f1-4e28-4c87-a6c2-5b5056b77150",
+      "name": "Mark Controlled Test",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "errorMessage": "Reliability Kit smoke test: intentional failure. If Error Intake is configured, one alert should be delivered."
+      },
+      "id": "3d9f7de3-452b-4bc9-8be3-4697d3c1efd5",
+      "name": "Create Controlled Failure",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [500, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Smoke Test": {
+      "main": [[{
+        "node": "Mark Controlled Test",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Mark Controlled Test": {
+      "main": [[{
+        "node": "Create Controlled Failure",
+        "type": "main",
+        "index": 0
+      }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8862cbe9-237e-42d6-8d8f-f73db940748d",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
