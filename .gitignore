@@ -1,0 +1,12 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.local.json
+workflows/*-with-credentials.json
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

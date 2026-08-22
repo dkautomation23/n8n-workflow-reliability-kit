@@ -1,0 +1,134 @@
+{
+  "name": "Reliability Kit — Heartbeat Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{
+            "field": "minutes",
+            "minutesInterval": 15
+          }]
+        }
+      },
+      "id": "d7876d4c-0b0d-423e-94c8-dacbb13c197c",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const required = [\n  'RELIABILITY_N8N_BASE_URL',\n  'RELIABILITY_N8N_API_KEY',\n  'RELIABILITY_STALE_AFTER_MINUTES',\n  'RELIABILITY_MONITORED_WORKFLOW_IDS',\n  'RELIABILITY_ALERT_WEBHOOK_URL',\n];\nconst missing = required.filter((key) => !$vars[key]);\n\nif (missing.length) {\n  throw new Error(`Set n8n variables before activating Heartbeat Monitor: ${missing.join(', ')}`);\n}\n\nreturn [{ json: { checkedAt: new Date().toISOString() } }];"
+      },
+      "id": "5ef555dd-ca73-43a9-96a0-1f2c593d7802",
+      "name": "Validate Reliability Variables",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.RELIABILITY_N8N_BASE_URL + '/api/v1/executions?status=success&limit=250' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{
+            "name": "X-N8N-API-KEY",
+            "value": "={{ $vars.RELIABILITY_N8N_API_KEY }}"
+          }]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a84f89f6-10bc-49c9-8b5d-b79a3faa21f8",
+      "name": "Fetch Successful Executions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst executions = response.data ?? [];\nconst monitoredIds = String($vars.RELIABILITY_MONITORED_WORKFLOW_IDS)\n  .split(',')\n  .map((id) => id.trim())\n  .filter(Boolean);\nconst staleAfterMinutes = Number($vars.RELIABILITY_STALE_AFTER_MINUTES);\nconst cutoff = Date.now() - staleAfterMinutes * 60 * 1000;\n\nconst stale = monitoredIds.flatMap((workflowId) => {\n  const latest = executions\n    .filter((item) => String(item.workflowId) === workflowId)\n    .map((item) => ({ ...item, completedAt: new Date(item.stoppedAt ?? item.startedAt ?? 0).getTime() }))\n    .sort((a, b) => b.completedAt - a.completedAt)[0];\n\n  if (!latest || latest.completedAt < cutoff) {\n    return [{\n      workflowId,\n      lastSuccessfulExecutionId: latest?.id ?? null,\n      lastSuccessfulAt: latest?.stoppedAt ?? latest?.startedAt ?? null,\n    }];\n  }\n\n  return [];\n});\n\nif (stale.length === 0) {\n  return [];\n}\n\nreturn [{\n  json: {\n    event: 'n8n.workflow.heartbeat_stale',\n    severity: 'warning',\n    detectedAt: new Date().toISOString(),\n    staleAfterMinutes,\n    staleWorkflows: stale,\n    runbook: 'Confirm whether each workflow was expected to run, then inspect its last execution before enabling retries.',\n  },\n}];"
+      },
+      "id": "53103525-459f-4342-8f55-ed5a0f9660e0",
+      "name": "Build Stale Workflow Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.RELIABILITY_ALERT_WEBHOOK_URL }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "ca832ea9-91bb-4e1e-82c4-8fceeee52cc5",
+      "name": "Send Heartbeat Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "e9190840-b08e-4cb9-b988-2ff879d6e81e",
+      "name": "Heartbeat Finished",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1260, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [[{
+        "node": "Validate Reliability Variables",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Validate Reliability Variables": {
+      "main": [[{
+        "node": "Fetch Successful Executions",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Fetch Successful Executions": {
+      "main": [[{
+        "node": "Build Stale Workflow Alert",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Build Stale Workflow Alert": {
+      "main": [[{
+        "node": "Send Heartbeat Alert",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Send Heartbeat Alert": {
+      "main": [[{
+        "node": "Heartbeat Finished",
+        "type": "main",
+        "index": 0
+      }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "af59de43-dc24-4fef-aec2-7e81cfe2f65e",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

@@ -1,0 +1,83 @@
+{
+  "name": "Reliability Kit — Error Intake",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c3a71e86-2ad2-47f1-9874-1734d83bb500",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $input.first().json;\nconst alertUrl = $vars.RELIABILITY_ALERT_WEBHOOK_URL;\n\nif (!alertUrl) {\n  throw new Error('Set RELIABILITY_ALERT_WEBHOOK_URL before activating Reliability Kit — Error Intake.');\n}\n\nconst execution = source.execution ?? {};\nconst workflow = source.workflow ?? {};\nconst error = execution.error ?? source.error ?? {};\n\nreturn [{\n  json: {\n    event: 'n8n.execution.failed',\n    severity: 'error',\n    detectedAt: new Date().toISOString(),\n    workflow: {\n      id: workflow.id ?? null,\n      name: workflow.name ?? null,\n    },\n    execution: {\n      id: execution.id ?? null,\n      url: execution.url ?? null,\n      lastNodeExecuted: execution.lastNodeExecuted ?? null,\n      mode: execution.mode ?? null,\n    },\n    error: {\n      message: error.message ?? 'n8n execution failed without an error message',\n      stack: error.stack ?? null,\n    },\n    runbook: 'Open the execution URL, inspect the last node, then retry only after identifying the failed dependency or input.',\n  },\n}];"
+      },
+      "id": "01e6460d-7db4-455f-a48b-6a1309f5f7d3",
+      "name": "Normalize Failure Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.RELIABILITY_ALERT_WEBHOOK_URL }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "ca8451bf-fca3-4cb2-adf6-95865b8e361d",
+      "name": "Send Reliability Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "6fb75bb4-e1c8-46fc-bc53-5cd788b44af9",
+      "name": "Delivery Attempt Finished",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [760, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [[{
+        "node": "Normalize Failure Context",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Normalize Failure Context": {
+      "main": [[{
+        "node": "Send Reliability Alert",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Send Reliability Alert": {
+      "main": [[{
+        "node": "Delivery Attempt Finished",
+        "type": "main",
+        "index": 0
+      }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f4271ab8-54df-4f80-af4b-b98d3c5eeb1c",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
