@@ -1,31 +1,31 @@
 # Production deployment checklist
 
-## До импорта
+## Before importing
 
-- [ ] Экспорт проверен в отдельной test/staging-инстанции.
-- [ ] Выбраны только критичные workflow для `RELIABILITY_MONITORED_WORKFLOW_IDS`.
-- [ ] Для каждого workflow зафиксирована ожидаемая частота успешных запусков.
-- [ ] Создан отдельный alert endpoint, который не публикует execution payload в публичный канал.
+- [ ] The exports have been tried in a separate test/staging instance.
+- [ ] Only genuinely critical workflows are listed in `RELIABILITY_MONITORED_WORKFLOW_IDS`.
+- [ ] The expected frequency of successful runs is written down for each of them.
+- [ ] A dedicated alert endpoint exists, and it does not publish execution payloads into a public channel.
 
-## Настройка переменных
+## Setting the variables
 
-- [ ] `RELIABILITY_ALERT_WEBHOOK_URL` указывает на endpoint команды.
-- [ ] `RELIABILITY_N8N_BASE_URL` соответствует текущей инстанции и не содержит пути к конкретному workflow.
-- [ ] `RELIABILITY_N8N_API_KEY` создан отдельно и хранится только в n8n.
-- [ ] `RELIABILITY_STALE_AFTER_MINUTES` больше нормального интервала workflow минимум в 2 раза.
-- [ ] `RELIABILITY_MONITORED_WORKFLOW_IDS` содержит только числовые id через запятую.
+- [ ] `RELIABILITY_ALERT_WEBHOOK_URL` points at the team's endpoint.
+- [ ] `RELIABILITY_N8N_BASE_URL` matches the current instance and carries no path to a specific workflow.
+- [ ] `RELIABILITY_N8N_API_KEY` was created separately and is stored only inside n8n.
+- [ ] `RELIABILITY_STALE_AFTER_MINUTES` is at least twice the workflow's normal interval.
+- [ ] `RELIABILITY_MONITORED_WORKFLOW_IDS` contains nothing but comma-separated numeric IDs.
 
-## Приёмка
+## Acceptance
 
-- [ ] `Error Intake` сохранён и выбран error workflow для каждого критичного процесса.
-- [ ] `Smoke Test` запущен вручную и выдал один alert с execution context.
-- [ ] Получатель может открыть execution и назвать последний выполненный node без дополнительного поиска.
-- [ ] При нормальном запуске Heartbeat не создаёт alert.
-- [ ] После искусственно устаревшего id Heartbeat создаёт один агрегированный alert.
+- [ ] `Error Intake` is saved and selected as the error workflow of every critical process.
+- [ ] `Smoke Test` has been run manually and produced one alert carrying execution context.
+- [ ] The recipient can open the execution and name the last node that ran, without searching for it.
+- [ ] A normal run produces no heartbeat alert.
+- [ ] An artificially stale ID produces exactly one aggregated heartbeat alert.
 
-## После активации
+## After activation
 
-- [ ] Назначен owner для реакции на alert.
-- [ ] Определено окно, в котором alert считается ожидаемым или игнорируется.
-- [ ] Проверка smoke test добавлена в процедуру изменения alert-маршрута.
-- [ ] Раз в квартал пересматривается список monitored workflow и пороги stale.
+- [ ] An owner is assigned to respond to alerts.
+- [ ] The window in which an alert is expected, or ignored, is agreed.
+- [ ] Running the smoke test is part of the procedure for changing the alert route.
+- [ ] The monitored list and the stale thresholds are reviewed every quarter.
