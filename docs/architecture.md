@@ -1,8 +1,11 @@
-# Архитектура Reliability Kit
+# Reliability Kit architecture
 
-## Принцип
+## Principle
 
-Я отделил наблюдение за workflow от канала доставки алертов. n8n формирует стабильный JSON-контракт, а внешний endpoint решает, куда он попадёт: в мессенджер, incident-систему или внутренний журнал. Это уменьшает привязку к конкретному вендору и упрощает аудит.
+Watching the workflows is kept separate from delivering the alerts. n8n produces
+a stable JSON contract; an external endpoint decides where it goes — a messenger,
+an incident system, or an internal log. That keeps the kit independent of any one
+vendor and keeps the payload auditable.
 
 ```text
 Workflow failure
@@ -18,20 +21,35 @@ Public API executions -> stale filter -> generic webhook -> alert destination
 
 ## Error Intake
 
-`Error Trigger` получает event только когда workflow выбран как error workflow для целевого production-процесса. Узел `Normalize Failure Context` формирует payload до обращения к endpoint. Поэтому информация о первичном падении остаётся доступной даже если транспорт алертов временно недоступен.
+`Error Trigger` only receives an event when this workflow is selected as the error
+workflow of the production process that failed. `Normalize Failure Context` builds
+the payload before anything is sent, so the details of the original failure still
+exist even when the alert transport is temporarily unavailable.
 
-У `HTTP Request` включено продолжение обычной ветки после ошибки транспорта. Это не делает доставку успешной — это не даёт второй ошибке замаскировать первую. Наблюдай за неуспешными запусками самого Error Intake отдельно.
+The `HTTP Request` node continues on the normal branch after a transport error.
+That does not make delivery successful — it stops a second error from masking the
+first. Watch the failed executions of Error Intake itself separately.
 
 ## Heartbeat Monitor
 
-Monitor не пытается угадать, какие workflow важны. Список `RELIABILITY_MONITORED_WORKFLOW_IDS` — явный production-контракт: в него включаются только процессы, для которых отсутствие успешного запуска действительно является инцидентом.
+The monitor does not guess which workflows matter. `RELIABILITY_MONITORED_WORKFLOW_IDS`
+is an explicit production contract: it should list only the processes where a
+missing successful run is genuinely an incident.
 
-Каждые 15 минут Monitor читает успешные execution, находит последний запуск по каждому id и сравнивает его с `RELIABILITY_STALE_AFTER_MINUTES`. Все проблемы одного запуска объединяются в один alert. Когда stale workflow нет, дальнейшие узлы не получают items и endpoint не вызывается.
+Every 15 minutes it reads successful executions, finds the latest run per ID and
+compares it against `RELIABILITY_STALE_AFTER_MINUTES`. Everything found in one
+pass is aggregated into a single alert. When nothing is stale, the downstream
+nodes receive no items and the endpoint is never called.
 
-## Минимальные права
+## Minimum permissions
 
-Ключ для `RELIABILITY_N8N_API_KEY` должен принадлежать владельцу инстанса или сервисной учётной записи с доступом только к нужному API. Не используй ключ администратора из личного браузера, не помещай его в export и не копируй в issue.
+The key behind `RELIABILITY_N8N_API_KEY` should belong to the instance owner or a
+service account with access to nothing but the API it needs. Do not reuse an admin
+key from a personal browser session, do not place it in an export, and do not
+paste it into an issue.
 
-## Границы kit
+## Boundaries
 
-Kit наблюдает состояние конкретных workflow. Он не проверяет доступность базы данных n8n, очередей, контейнеров или reverse proxy. Для этого нужен отдельный инфраструктурный мониторинг.
+The kit observes the state of specific workflows. It does not check the n8n
+database, the queues, the containers or the reverse proxy. Those need
+infrastructure monitoring of their own.
