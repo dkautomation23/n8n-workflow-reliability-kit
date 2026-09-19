@@ -1,0 +1,84 @@
+name: Bug report
+description: A workflow from this kit doesn't behave as documented.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste your `RELIABILITY_N8N_API_KEY`, alert webhook URL, or
+        any other live credential or private endpoint here. Replace them
+        with placeholders like `<redacted>`.
+
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Which workflow
+      options:
+        - "01-error-intake.json (Reliability Kit — Error Intake)"
+        - "02-heartbeat-monitor.json (Reliability Kit — Heartbeat Monitor)"
+        - "03-reliability-smoke-test.json (Reliability Kit — Smoke Test)"
+        - More than one / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: n8n-version
+    attributes:
+      label: n8n version
+      description: Settings → About in your n8n instance.
+      placeholder: "1.6x.x"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: hosting
+    attributes:
+      label: n8n hosting
+      options:
+        - Self-hosted (Docker)
+        - Self-hosted (npm/other)
+        - n8n Cloud
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What you did, and what happened
+      description: >
+        E.g. "ran Smoke Test manually", "workflow X failed and Error Intake
+        should have fired", "Heartbeat Monitor ran on schedule".
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: >
+        The n8n variables in play and their non-secret values (e.g.
+        RELIABILITY_STALE_AFTER_MINUTES=60, RELIABILITY_MONITORED_WORKFLOW_IDS=12,34).
+        Redact RELIABILITY_ALERT_WEBHOOK_URL and RELIABILITY_N8N_API_KEY —
+        say only whether they were set.
+    validations:
+      required: false
+
+  - type: textarea
+    id: execution
+    attributes:
+      label: Execution log or error
+      description: >
+        The relevant part of the n8n execution log, with any header, token,
+        or endpoint replaced by a placeholder.
+      render: shell
+    validations:
+      required: false
